@@ -16,7 +16,7 @@ playerAnimationLeft = [pygame.image.load("images/L1.png"),pygame.image.load("ima
 playerStandingImage = pygame.image.load("images/standing.png")
 projectileDirection = ""
 #Variabili:
-scroll = [0, 0]
+scroll = [0, 0]#camera
 def init():
     global player,projectileList,solidObjects,platformWidth,startingJumpY
     #Variabili:
@@ -24,10 +24,11 @@ def init():
     projectileList = []
     #Oggetti solidi:
     solidObjects = []
-    solidObjects.append(pygame.Rect(0,333,400,33))#Piattaforma
-    solidObjects.append(pygame.Rect(0,133,300,33))#Piattaforma
-    solidObjects.append(pygame.Rect(0,533,300,33))#Piattaforma
-    solidObjects.append(pygame.Rect(1144,111,300,33))#Piattaforma
+    
+    solidObjects.append(pygame.Rect(0,590,600,33))#base
+    solidObjects.append(pygame.Rect(-110,500,60,33))#piattaforma1
+    solidObjects.append(pygame.Rect(0,360,60,33))#piattaforma1
+    
     #Variabili 
     startingJumpY = 0#y dove viene riportato il player quando sbatte
     platformWidth = 600
@@ -70,28 +71,45 @@ def pollEvents():
                 
 def update():
     global startingJumpY, platformWidth, scroll
+    #movimento player:
     if(player.directionRight or player.directionLeft): #movimento player
         if(player.directionRight):
             player.rect.x += 5
         elif(player.directionLeft):
             player.rect.x -= 5
-        #update animation player
+    #Update animazione player:
         player.animationFrame += 0.1 
         if(player.animationFrame >= 4):
             player.animationFrame = 0
-    count = 0#iteratore di projectileList
     #Jump del player:
     if (player.isJumping):
         player.rect.y -= player.vel_y*2
-        player.vel_y -= 1
-        
+        player.vel_y -= 1 
         if player.vel_y < -15:
             player.isJumping = False
             player.vel_y = 15
-            
+   
     #Collisioni (todo):
-
-    #Camera movement:
+    collisions = collisionsTest()
+    
+    for rect in collisions:
+        if player.rect.right >=  rect.left and player.rect.right < rect.left +10:
+            print("sinistra")
+            player.rect.right = rect.left -3
+            continue;
+        elif player.rect.left <  rect.right  and player.rect.left > rect.right -10:
+            print("destra")
+            player.rect.left = rect.right +3
+            continue;
+        if player.rect.top <= rect.bottom and player.rect.top >= rect.bottom - 44: #player sotto oggetto
+            player.rect.top = rect.bottom +3
+            print("sotto")
+        elif player.rect.bottom >= rect.top and player.rect.bottom <= rect.top + 44: #player sopra oggetto
+            player.rect.bottom = rect.top - 3
+            print("sopra,","playery->",player.rect.y," rectY->",rect.centery)
+            
+       
+    #Camera:
     scroll[0] += (player.rect.x - scroll[0] - 300) / 20
     scroll[1] += (player.rect.y - scroll[1] - 430) / 10
 
@@ -99,24 +117,29 @@ def update():
 
 def draw():
     global scroll
-    
     #Draw player:
     if(player.directionRight):#disegno se il player si sta muovendo verso destra
         screen.blit(playerAnimationRight[int(player.animationFrame)],(player.rect.x - scroll[0], player.rect.y - scroll[1]))
     elif(player.directionLeft):#disegno se il player si sta muovendo verso sinistra
         screen.blit(playerAnimationLeft[int(player.animationFrame)],(player.rect.x - scroll[0],player.rect.y - scroll[1]))
     if(not player.directionRight and not player.directionLeft):#disegno player da fermo
-        screen.blit(playerStandingImage,(player.rect.x - scroll[0],player.rect.y - scroll[1]))
-    
+        screen.blit(playerStandingImage,(player.rect.x - scroll[0]-17,player.rect.y - scroll[1]))
+        pygame.draw.rect(screen,(255,0,0),(player.rect.x - scroll[0],player.rect.y - scroll[1],player.rect.w,player.rect.h))
     #Draw solidObjects:
     for solidObject in solidObjects:
         pygame.draw.rect(screen,(255,0,0),(solidObject.x - scroll[0], solidObject.y - scroll[1], solidObject.w, solidObject.h))
     #Draw texts:
     myfont = pygame.font.SysFont('Comic Sans MS', 20)
-    textsurface = myfont.render('Premi R per ricaricare, A per sparare', False, (0,0,0))
+    textsurface = myfont.render('Premi R per ricaricare', False, (0,0,0))
     screen.blit(textsurface,(233,0))
     
     pygame.display.update()
     clock.tick(60)
 
-    
+def collisionsTest():
+    global player, solidObjects
+    collisions = []
+    for solidObject in solidObjects:
+        if(player.rect.colliderect(solidObject)):
+            collisions.append(solidObject)
+    return collisions
