@@ -4,7 +4,7 @@ from player import Player #Classi
 #FINESTRA:
 pygame.init()
 pygame.font.init()
-WINDOW_SIZE = (600,600)
+WINDOW_SIZE = (800,600)
 screen = pygame.display.set_mode(WINDOW_SIZE,0,32)
 clock = pygame.time.Clock()#timer FPS
 #IMMAGINI:
@@ -89,25 +89,26 @@ def update():
             player.isJumping = False
             player.vel_y = 15
    
-    #Collisioni (todo):
+    #Collisioni:
     collisions = collisionsTest()
-    
+    if(len(collisions) == 0 and not player.isJumping):
+        player.rect.y += 50
     for rect in collisions:
-        if player.rect.right >=  rect.left and player.rect.right < rect.left +10:
-            print("sinistra")
+        if player.rect.right >=  rect.left and player.rect.right < rect.left + 10:#player a destra dell' oggetto
             player.rect.right = rect.left -3
             continue;
-        elif player.rect.left <  rect.right  and player.rect.left > rect.right -10:
-            print("destra")
+        elif player.rect.left <  rect.right  and player.rect.left > rect.right -10:#player a sinistra dell'oggetto
+            
             player.rect.left = rect.right +3
             continue;
-        if player.rect.top <= rect.bottom and player.rect.top >= rect.bottom - 44: #player sotto oggetto
-            player.rect.top = rect.bottom +3
-            print("sotto")
-        elif player.rect.bottom >= rect.top and player.rect.bottom <= rect.top + 44: #player sopra oggetto
-            player.rect.bottom = rect.top - 3
-            print("sopra,","playery->",player.rect.y," rectY->",rect.centery)
-            
+        if player.rect.top <= rect.bottom and player.rect.top >= rect.bottom - 44:#player sotto oggetto
+            if(player.isJumping):
+                player.rect.top = rect.bottom +3
+                player.vel_y = 0
+            else:
+                player.rect.top = rect.bottom +3    
+        elif player.rect.bottom >= rect.top and player.rect.bottom <= rect.top + 44:#player sopra oggetto
+            player.rect.bottom = rect.top +1
        
     #Camera:
     scroll[0] += (player.rect.x - scroll[0] - 300) / 20
@@ -121,7 +122,7 @@ def draw():
     if(player.directionRight):#disegno se il player si sta muovendo verso destra
         screen.blit(playerAnimationRight[int(player.animationFrame)],(player.rect.x - scroll[0], player.rect.y - scroll[1]))
     elif(player.directionLeft):#disegno se il player si sta muovendo verso sinistra
-        screen.blit(playerAnimationLeft[int(player.animationFrame)],(player.rect.x - scroll[0],player.rect.y - scroll[1]))
+        screen.blit(playerAnimationLeft[int(player.animationFrame)],(player.rect.x - scroll[0]-20,player.rect.y - scroll[1]))
     if(not player.directionRight and not player.directionLeft):#disegno player da fermo
         screen.blit(playerStandingImage,(player.rect.x - scroll[0]-17,player.rect.y - scroll[1]))
         pygame.draw.rect(screen,(255,0,0),(player.rect.x - scroll[0],player.rect.y - scroll[1],player.rect.w,player.rect.h))
