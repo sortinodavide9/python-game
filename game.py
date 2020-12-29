@@ -8,7 +8,6 @@ WINDOW_SIZE = (800,600)
 screen = pygame.display.set_mode(WINDOW_SIZE,0,32)
 clock = pygame.time.Clock()#timer FPS
 #IMMAGINI:
-projectileImage = pygame.image.load("images/arrow.png")
 backgroundImage = pygame.image.load("images/bg.jpg")
 backgroundImage = pygame.transform.scale(backgroundImage,WINDOW_SIZE)
 playerAnimationRight = [pygame.image.load("images/R1.png"),pygame.image.load("images/R2.png"),pygame.image.load("images/R3.png"),pygame.image.load("images/R4.png")]
@@ -26,9 +25,18 @@ def init():
     solidObjects = []
     
     solidObjects.append(pygame.Rect(0,590,600,33))#base
-    solidObjects.append(pygame.Rect(-110,500,60,33))#piattaforma1
-    solidObjects.append(pygame.Rect(0,360,60,33))#piattaforma1
-    
+    #altre piattaforme:
+    xx = 0
+    cou = 1
+    for n in range(10):
+        if(xx == 0):
+            solidObjects.append(pygame.Rect(0,590-(cou*140),100,33))#base
+            cou += 1
+            xx = 1
+        else:
+            solidObjects.append(pygame.Rect(200,590-(cou*130),100,33))#base
+            cou += 1
+            xx = 0
     #Variabili 
     startingJumpY = 0#y dove viene riportato il player quando sbatte
     platformWidth = 600
@@ -85,20 +93,19 @@ def update():
     if (player.isJumping):
         player.rect.y -= player.vel_y*2
         player.vel_y -= 1 
-        if player.vel_y < -15:
+        if player.vel_y < -10:
             player.isJumping = False
-            player.vel_y = 15
+            player.vel_y = 10
    
     #Collisioni:
     collisions = collisionsTest()
-    if(len(collisions) == 0 and not player.isJumping):
-        player.rect.y += 50
+    if(len(collisions) == 0 and not player.isJumping):#caduta del player se non tocca nulla
+        player.rect.y += 20
     for rect in collisions:
         if player.rect.right >=  rect.left and player.rect.right < rect.left + 10:#player a destra dell' oggetto
             player.rect.right = rect.left -3
             continue;
         elif player.rect.left <  rect.right  and player.rect.left > rect.right -10:#player a sinistra dell'oggetto
-            
             player.rect.left = rect.right +3
             continue;
         if player.rect.top <= rect.bottom and player.rect.top >= rect.bottom - 44:#player sotto oggetto

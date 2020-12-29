@@ -6,4 +6,4 @@ class Player():
         self.directionLeft = False
         self.animationFrame = 0
         self.isJumping = False
-        self.vel_y = 15
+        self.vel_y = 10
