@@ -1,4 +1,4 @@
-import pygame,sys
+import pygame, sys, random
 from pygame import *
 from player import Player #Classi
 #FINESTRA:
@@ -14,10 +14,21 @@ playerAnimationRight = [pygame.image.load("images/R1.png"),pygame.image.load("im
 playerAnimationLeft = [pygame.image.load("images/L1.png"),pygame.image.load("images/L2.png"),pygame.image.load("images/L3.png"),pygame.image.load("images/L4.png")]
 playerStandingImage = pygame.image.load("images/standing.png")
 projectileDirection = ""
+#IMMAGINI BLOCCHI:
+dirtImage = pygame.image.load("images/blocks/dirt.png")
+grassImage = pygame.image.load("images/blocks/grass.png")
+plantImage = pygame.image.load("images/blocks/plant.png")
 #Variabili:
 scroll = [0, 0]#camera
+CHUNK_SIZE = 8
+game_map = {}
+tile_index = {1:grassImage,
+              2:dirtImage,
+              3:plantImage
+              }
+tileRects = []
 def init():
-    global player,projectileList,solidObjects,platformWidth,startingJumpY
+    global player,projectileList,solidObjects,platformWidth
     #Variabili:
     player = Player()#Oggetto player
     projectileList = []
@@ -25,6 +36,9 @@ def init():
     solidObjects = []
     
     solidObjects.append(pygame.Rect(0,590,600,33))#base
+    solidObjects.append(pygame.Rect(222,555,600,33))#base
+    solidObjects.append(pygame.Rect(422,485,60,63))#base
+    solidObjects.append(pygame.Rect(483,485,60,63))#base
     #altre piattaforme:
     xx = 0
     cou = 1
@@ -37,11 +51,9 @@ def init():
             solidObjects.append(pygame.Rect(200,590-(cou*130),100,33))#base
             cou += 1
             xx = 0
-    #Variabili 
-    startingJumpY = 0#y dove viene riportato il player quando sbatte
-    platformWidth = 600
+    
 def pollEvents():
-    global projectileList, projectileDirection,startingJumpY
+    global projectileList, projectileDirection
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
@@ -52,7 +64,7 @@ def pollEvents():
                 pygame.quit()
                 sys.exit()
             elif event.key == K_SPACE:
-                startingJumpY = player.rect.y
+               
                 
                 player.isJumping = True
                 
@@ -64,10 +76,8 @@ def pollEvents():
                 init()
 
             elif event.key == K_RIGHT:
-                projectileDirection = "right"
                 player.directionRight = True
             elif event.key == K_LEFT:
-                projectileDirection = "left"
                 player.directionLeft= True
                 
         if event.type == KEYUP:
@@ -78,13 +88,13 @@ def pollEvents():
                 player.directionLeft = False
                 
 def update():
-    global startingJumpY, platformWidth, scroll
+    global platformWidth, scroll
     #movimento player:
     if(player.directionRight or player.directionLeft): #movimento player
         if(player.directionRight):
-            player.rect.x += 5
+            player.rect.x += 10
         elif(player.directionLeft):
-            player.rect.x -= 5
+            player.rect.x -= 10
     #Update animazione player:
         player.animationFrame += 0.1 
         if(player.animationFrame >= 4):
@@ -93,20 +103,21 @@ def update():
     if (player.isJumping):
         player.rect.y -= player.vel_y*2
         player.vel_y -= 1 
-        if player.vel_y < -10:
+        if player.vel_y < -15:
             player.isJumping = False
-            player.vel_y = 10
+            player.vel_y = 15
    
     #Collisioni:
     collisions = collisionsTest()
     if(len(collisions) == 0 and not player.isJumping):#caduta del player se non tocca nulla
-        player.rect.y += 20
+        player.rect.y += 10
     for rect in collisions:
         if player.rect.right >=  rect.left and player.rect.right < rect.left + 10:#player a destra dell' oggetto
             player.rect.right = rect.left -3
             continue;
         elif player.rect.left <  rect.right  and player.rect.left > rect.right -10:#player a sinistra dell'oggetto
             player.rect.left = rect.right +3
+            
             continue;
         if player.rect.top <= rect.bottom and player.rect.top >= rect.bottom - 44:#player sotto oggetto
             if(player.isJumping):
@@ -115,16 +126,19 @@ def update():
             else:
                 player.rect.top = rect.bottom +3    
         elif player.rect.bottom >= rect.top and player.rect.bottom <= rect.top + 44:#player sopra oggetto
-            player.rect.bottom = rect.top +1
-       
+            player.rect.bottom = rect.top + 1 
+    blockCollisions = collisionsTestBlock()
+    for blockRect in blockCollisions:
+        if blockRect.colliderect(player.rect):
+            player.rect.bottom = blockRect.top
     #Camera:
     scroll[0] += (player.rect.x - scroll[0] - 300) / 20
     scroll[1] += (player.rect.y - scroll[1] - 430) / 10
-
+    
             
 
 def draw():
-    global scroll
+    global scroll,CHUNK_SIZE,game_map,tile_index
     #Draw player:
     if(player.directionRight):#disegno se il player si sta muovendo verso destra
         screen.blit(playerAnimationRight[int(player.animationFrame)],(player.rect.x - scroll[0], player.rect.y - scroll[1]))
@@ -140,14 +154,55 @@ def draw():
     myfont = pygame.font.SysFont('Comic Sans MS', 20)
     textsurface = myfont.render('Premi R per ricaricare', False, (0,0,0))
     screen.blit(textsurface,(233,0))
-    
+    #Draw map:
+    tileRects.clear()
+    for y in range(4):
+        for x in range(9):
+            targetX = x -1 + int(scroll[0] / (CHUNK_SIZE * 16))
+            targetY = y -1 + int(scroll[1] / (CHUNK_SIZE * 16))
+            targetChunk = str(targetX) + ";" + str(targetY)
+            if targetChunk not in game_map:
+                game_map[targetChunk] = generate_chunk(targetX, targetY)
+            for tile in game_map[targetChunk]:
+                screen.blit(tile_index[tile[1]],(tile[0][0]*16-scroll[0],tile[0][1]*16-scroll[1]))                 
+                if tile[1] in [1]:
+                    tileRects.append(pygame.Rect(tile[0][0]*16,tile[0][1]*16,16,16))    
+                    
+    #Refresh:
     pygame.display.update()
     clock.tick(60)
-
+    
 def collisionsTest():
     global player, solidObjects
     collisions = []
     for solidObject in solidObjects:
         if(player.rect.colliderect(solidObject)):
-            collisions.append(solidObject)
+            collisions.append(solidObject)  
+    
     return collisions
+def collisionsTestBlock():
+    global player
+    collisions = [] 
+    for tile in tileRects:
+        if(player.rect.colliderect(tile)):  
+            collisions.append(tile)   
+           
+    return collisions
+def generate_chunk(x,y):
+    global CHUNK_SIZE
+    chunk_data = []
+    for y_pos in range(CHUNK_SIZE):
+        for x_pos in range(CHUNK_SIZE):
+            target_x = x * CHUNK_SIZE + x_pos
+            target_y = y * CHUNK_SIZE + y_pos
+            tile_type = 0 # nothing
+            if target_y > 10:
+                tile_type = 2 # dirt
+            elif target_y == 10:
+                tile_type = 1 # grass
+            elif target_y == 9:
+                if random.randint(1,5) == 1:
+                    tile_type = 3 # plant
+            if tile_type != 0:
+                chunk_data.append([[target_x,target_y+25],tile_type])
+    return chunk_data
