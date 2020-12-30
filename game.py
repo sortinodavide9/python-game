@@ -1,4 +1,4 @@
-import pygame, sys, random
+import pygame, sys, random, noise
 from pygame import *
 from player import Player #Classi
 #FINESTRA:
@@ -17,7 +17,9 @@ projectileDirection = ""
 #IMMAGINI BLOCCHI:
 dirtImage = pygame.image.load("images/blocks/dirt.png")
 grassImage = pygame.image.load("images/blocks/grass.png")
-plantImage = pygame.image.load("images/blocks/plant.png")
+plantImage = pygame.image.load("images/blocks/plant.png").convert()
+plantImage.set_colorkey((255,255,255))
+
 #Variabili:
 scroll = [0, 0]#camera
 CHUNK_SIZE = 8
@@ -196,11 +198,12 @@ def generate_chunk(x,y):
             target_x = x * CHUNK_SIZE + x_pos
             target_y = y * CHUNK_SIZE + y_pos
             tile_type = 0 # nothing
-            if target_y > 10:
+            height = int(noise.pnoise1(target_x * 0.1, repeat=9999999)*5)
+            if target_y > 8 - height:
                 tile_type = 2 # dirt
-            elif target_y == 10:
+            elif target_y == 8 - height:
                 tile_type = 1 # grass
-            elif target_y == 9:
+            elif target_y == 8 - height - 1:
                 if random.randint(1,5) == 1:
                     tile_type = 3 # plant
             if tile_type != 0:
